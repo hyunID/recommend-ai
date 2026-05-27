@@ -91,6 +91,29 @@ docker run -d --name recommend-ai -p 8000:8000 --env-file .env recommend-ai
 - ReDoc: http://localhost:8000/redoc
 - 헬스체크: http://localhost:8000/health
 
+### Render 배포
+
+운영 환경(Render Web Service) 기준 설정 예시입니다.
+
+| 항목 | 값 |
+|------|-----|
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health Check | `/health` |
+
+Render Environment Variables:
+
+| 변수 | 필수 | 설명 |
+|------|------|------|
+| `GEMINI_API_KEY` | ✅ | Gemini API 키 |
+| `GEMINI_MODEL` | 선택 | 기본값 `gemini-1.5-flash` |
+
+운영 URL 예시: `https://recommend-ai-o88u.onrender.com`
+
+> `.env` 파일은 Render 대시보드의 Environment Variables로 설정합니다. 저장소에 커밋하지 마세요.
+
+`commerce-api` 연동 시 prod profile의 `recommend-ai.base-url`을 위 운영 URL로 설정합니다.
+
 ## API
 
 ### `POST /recommend`
@@ -148,7 +171,17 @@ curl -X POST "http://localhost:8000/recommend" \
 
 1. `GEMINI_API_KEY`가 있으면 Gemini API로 리뷰 기반 키워드를 생성합니다.
 2. API 키가 없거나, 네트워크·응답 파싱 오류 등으로 실패하면 기존 빈도 기반 로컬 추출 로직으로 fallback 합니다.
-3. 클라이언트 요청/응답 스키마는 동일합니다.
+3. 응답의 `source` 필드로 생성 출처(`gemini` / `fallback`)를 확인할 수 있습니다.
+
+## 유틸리티
+
+Gemini 사용 가능 모델 목록 확인:
+
+```bash
+python scripts/list_models.py
+```
+
+`.env`의 `GEMINI_API_KEY`를 사용하며, 모델명과 `supported_actions`를 출력합니다.
 
 ## 프로젝트 구조
 
@@ -161,6 +194,8 @@ recommend-ai/
 │   └── services/
 │       ├── gemini_service.py     # Gemini API 연동
 │       └── recommend_service.py  # 키워드 생성 (Gemini + fallback)
+├── scripts/
+│   └── list_models.py            # Gemini 모델 목록 조회 (임시)
 ├── .env.example
 ├── .dockerignore
 ├── .gitignore
